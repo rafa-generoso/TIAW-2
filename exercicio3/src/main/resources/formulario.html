@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Personagens</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="onLoad()">
+    <h1>Controle de Personagens</h1>
+    <input type="hidden" id="msg" value="">
+    
+    <form id="addForm">
+        <input type="text" id="nome" placeholder="Nome" required>
+        <input type="number" id="idade" placeholder="Idade" required>
+        <input type="text" id="sexo" placeholder="Sexo" required>
+        <input type="text" id="especie" placeholder="Espécie" required>
+        <button type="submit">Adicionar</button>
+    </form>
+
+    <input type="text" id="searchId" placeholder="Digite o ID do personagem">
+    <button id="searchButton">Buscar Personagem</button>
+    <div id="personagemInfo"></div>
+
+    <form id="updateForm">
+        <input type="number" id="updateId" placeholder="ID do Personagem" required>
+        <input type="text" id="updateNome" placeholder="Novo Nome" required>
+        <input type="number" id="updateIdade" placeholder="Nova Idade" required>
+        <input type="text" id="updateSexo" placeholder="Novo Sexo" required>
+        <input type="text" id="updateEspecie" placeholder="Nova Espécie" required>
+        <button type="submit">Atualizar</button>
+    </form>
+
+    <form id="deleteForm" onsubmit="return confirmarDelete();">
+        <input type="number" id="deleteId" placeholder="ID do Personagem" required>
+        <button type="submit">Excluir</button>
+    </form>
+
+    <button id="showAllButton">Mostrar Todos os Personagens</button>
+    <div id="allPersonagens"></div>
+
+    <script>
+        // Função para adicionar personagem
+        document.getElementById('addForm').onsubmit = function(event) {
+    event.preventDefault();
+    
+    // Obtém os dados do formulário
+    const data = new URLSearchParams(new FormData(this));
+    
+    fetch('http://localhost:8080/personagem', {
+        method: 'POST',
+        body: data,
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded' // Define o tipo de conteúdo
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.text();
+        } else {
+            throw new Error("Erro no servidor");
+        }
+    })
+    .then(data => alert('Adicionado com ID: ' + data))
+    .catch(error => alert('Erro: ' + error.message));
+
+    this.reset(); // Limpa o formulário
+};
+
+
+        // Função para buscar personagem por ID
+        document.getElementById('searchButton').addEventListener('click', function() {
+            const id = document.getElementById('searchId').value;
+
+            fetch(`http://localhost:8080/personagem/${id}`)
+            .then(response => response.text())  // Recebe a resposta como texto
+            .then(xmlString => {
+                let parser = new DOMParser();
+                let xmlDoc = parser.parseFromString(xmlString, "application/xml");
+                let personagem = xmlDoc.getElementsByTagName("personagem")[0];
+
+                if (personagem) {
+                    let nome = personagem.getElementsByTagName("nome")[0].textContent;
+                    let idade = personagem.getElementsByTagName("idade")[0].textContent;
+                    let sexo = personagem.getElementsByTagName("sexo")[0].textContent;
+                    let especie = personagem.getElementsByTagName("especie")[0].textContent;
+
+                    const personagemInfo = `Nome: ${nome}, Idade: ${idade}, Sexo: ${sexo}, Espécie: ${especie}`;
+                    document.getElementById('personagemInfo').innerText = personagemInfo;
+                } else {
+                    alert("Personagem não encontrado");
+                }
+            })
+            .catch(error => {
+                alert('Erro: ' + error.message);
+            });
+        });
+
+        // Função para atualizar personagem
+        document.getElementById('updateForm').onsubmit = function(event) {
+            event.preventDefault();
+            const id = document.getElementById('updateId').value;
+            const data = new URLSearchParams(new FormData(this));
+            fetch(`http://localhost:8080/personagem/update/${id}`, {
+                method: 'PUT',
+                body: data
+            })
+            .then(response => response.ok ? alert('Atualizado com sucesso!') : alert('Personagem não encontrado'))
+            .catch(error => alert('Erro ao atualizar personagem: ' + error.message));
+            this.reset();
+        };
+
+        // Função para deletar personagem
+        function confirmarDelete() {
+            const id = document.getElementById('deleteId').value;
+            if (confirm(`Excluir personagem com ID ${id}?`)) {
+                fetch(`http://localhost:8080/personagem/remove/${id}`, { method: 'DELETE' })
+                .then(response => response.ok ? alert('Personagem excluído com sucesso!') : alert('Personagem não encontrado'))
+                .catch(error => alert('Erro ao excluir personagem: ' + error.message));
+            }
+            return false; // Para evitar o envio do formulário
+        }
+
+        // Função para exibir todos os personagens
+        document.getElementById('showAllButton').onclick = function() {
+            fetch('http://localhost:8080/personagem')
+            .then(response => response.text())  // Recebe a resposta como texto
+            .then(xmlString => {
+                let parser = new DOMParser();
+                let xmlDoc = parser.parseFromString(xmlString, "application/xml");
+                let personagens = xmlDoc.getElementsByTagName("personagem");
+
+                let output = '';
+                for (let i = 0; i < personagens.length; i++) {
+                    let id = personagens[i].getElementsByTagName("id")[0].textContent;
+                    let nome = personagens[i].getElementsByTagName("nome")[0].textContent;
+                    let idade = personagens[i].getElementsByTagName("idade")[0].textContent;
+                    let sexo = personagens[i].getElementsByTagName("sexo")[0].textContent;
+                    let especie = personagens[i].getElementsByTagName("especie")[0].textContent;
+
+                    output += `ID: ${id}, Nome: ${nome}, Idade: ${idade}, Sexo: ${sexo}, Espécie: ${especie}<br>`;
+                }
+                document.getElementById('allPersonagens').innerHTML = output;
+            })
+            .catch(error => {
+                alert('Erro ao buscar todos os personagens: ' + error.message);
+            });
+        };
+
+        function onLoad() {
+            const msg = document.getElementById("msg").value;
+            if (msg) alert(msg);
+        }
+    </script>
+</body>
+</html>
